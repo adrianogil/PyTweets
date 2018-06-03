@@ -35,18 +35,29 @@ class AccountDAO:
         self.cursor.execute(sql_query_save, save_data)
         self.conn.commit()
 
-    def getAccount(self, name):
+    def createAccount(self, row):
+        account = self.entityFactory.createAccount()
+
+        account.id = int(row[0])
+        account.bio = row[3]
+        account.name = row[1]
+        account.twitter_handle = row[2]
+        account.followers = int(row[4])
+        account.following = int(row[5])
+        account.iam_following = row[8]
+        account.total_tweets = int(row[6])
+
+
+    def getAccount(self, twitter_handle):
         # print('DEBUG: categoryDAO - trying to get category from name: ' + name)
-        sql_query_get = "SELECT * from Accounts WHERE account_name LIKE ?"
-        sql_data = (name,)
+        sql_query_get = "SELECT * from Accounts WHERE twitter_handle LIKE ?"
+        sql_data = (twitter_handle,)
         self.cursor.execute(sql_query_get, sql_data)
         row = self.cursor.fetchone()
         if row is None:
             return None
-        account = self.entityFactory.createAccount(str(row[1]))
-        account.id = int(row[0])
-
-        return account
+        
+        return createAccount(row)
 
     def getAll(self):
         sql_query_get = "SELECT * from Accounts ORDER BY id_account"
