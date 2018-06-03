@@ -7,8 +7,11 @@ import sqlite3
 
 import twitter_secret, importutils
 
+import followers
+
 importutils.addpath(__file__, 'entity')
 from entity.account import Account
+from entity.entityfactory import EntityFactory
 
 importutils.addpath(__file__, 'dao')
 from dao.accountdao import AccountDAO
@@ -20,7 +23,9 @@ conn = sqlite3.connect(okane_directory + 'pytwitter.sqlite');
 # Creating cursor
 cursor = conn.cursor()
 
-accountDAO = AccountDAO(conn, cursor, None)
+entity_factory = EntityFactory()
+
+accountDAO = AccountDAO(conn, cursor, entity_factory)
 accountDAO.createTables()
 
 # Twitter API credentials (Get from https://apps.twitter.com)
@@ -35,11 +40,8 @@ auth.set_access_token(access_key, access_secret)
 # Twitter only allows access to a users most recent 3240 tweets with this method
 api = tweepy.API(auth)
 
-def save_user_data(twitter_handle):
-
-    user = api.get_user(twitter_handle)
-
-    account = Account(twitter_handle)
+def save_user_data_into_db(user):
+    account = Account(user.screen_name)
     account.bio = user.description
     account.name = user.name
     account.followers = user.followers_count
@@ -49,6 +51,21 @@ def save_user_data(twitter_handle):
 
     accountDAO.save(account)
 
+def save_followers_from(twitter_handle):
+    max_users = 4000
+    following = followers.get_user_followings(api, twitter_handle, max_users)
+    for user in following:
+        save_user_data_into_db(user)
+        user_following = followers.get_user_followings(api, user.screen_name, max_users)
+        for u in user_following:
+            save_user_data_into_db(u)
+
+def save_user_data(twitter_handle):
+
+    user = api.get_user(twitter_handle)
+    save_user_data_into_db(user)
+    
+
 if __name__ == '__main__':
     #pass in the username of the account you want to download
-    save_user_data("sandmangil")
+    save_followers_from("sandmangil")

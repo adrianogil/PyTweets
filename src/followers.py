@@ -90,6 +90,41 @@ def parse_args():
     return parser.parse_args()
 
 
+def get_user_followings(api, twitter_account, max_users):
+    """
+    Return the bios of the people that a user follows
+    api -- the tweetpy API object
+    twitter_account -- the Twitter handle of the user
+    max_users -- the maximum amount of users to return
+    """
+
+    user_ids = []
+
+    try:
+        for page in tweepy.Cursor(api.followers_ids, id=twitter_account, count=5000).pages():
+            user_ids.extend(page)
+
+    except tweepy.RateLimitError:
+        print "RateLimitError...waiting 1000 seconds to continue"
+        time.sleep(1000)
+        for page in tweepy.Cursor(api.followers_ids, id=twitter_account, count=5000).pages():
+            user_ids.extend(page)
+
+    following = []
+
+    for start in xrange(0, min(max_users, len(user_ids)), 100):
+        end = start + 100
+
+        try:
+            following.extend(api.lookup_users(user_ids[start:end]))
+
+        except tweepy.RateLimitError:
+            print "RateLimitError...waiting 1000 seconds to continue"
+            time.sleep(1000)
+            following.extend(api.lookup_users(user_ids[start:end]))
+
+    return following
+
 def get_friends_descriptions(api, file_path, twitter_account, max_users):
     """
     Return the bios of the people that a user follows
