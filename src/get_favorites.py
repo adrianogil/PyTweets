@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import tweepy #https://github.com/tweepy/tweepy
+# https://github.com/tweepy/tweepy
+import tweepy
 import csv
-
+import sys
 import twitter_secret
 
 # Twitter API credentials (Get from https://apps.twitter.com)
@@ -13,29 +14,28 @@ access_key = twitter_secret.access_key
 access_secret = twitter_secret.access_secret
 
 
-def get_all_tweets(screen_name):
-    #Twitter only allows access to a users most recent 3240 tweets with this method
-
-    #authorize twitter, initialize tweepy
+def get_all_tweets(screen_name, target_file="%NAME%_favorite_tweets.csv"):
+    # Twitter only allows access to a users most recent 3240 tweets with this method
+    # Authorize twitter, initialize tweepy
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_key, access_secret)
     api = tweepy.API(auth)
 
-    #initialize a list to hold all the tweepy Tweets
+    # Initialize a list to hold all the tweepy Tweets
     alltweets = []
 
-    #make initial request for most recent tweets (200 is the maximum allowed count)
-    new_tweets = api.favorites(screen_name,count=200)
+    # Make initial request for most recent tweets (200 is the maximum allowed count)
+    new_tweets = api.favorites(screen_name, count=200)
 
-    #save most recent tweets
+    # Save most recent tweets
     alltweets.extend(new_tweets)
 
-    #save the id of the oldest tweet less one
+    # Save the id of the oldest tweet less one
     oldest = alltweets[-1].id - 1
 
-    #keep grabbing tweets until there are no tweets left to grab
+    # Keep grabbing tweets until there are no tweets left to grab
     while len(new_tweets) > 0:
-        print "getting tweets before %s" % (oldest)
+        print("getting tweets before %s" % (oldest))
 
         #all subsiquent requests use the max_id param to prevent duplicates
         new_tweets = api.favorites(screen_name,count=200,max_id=oldest)
@@ -46,13 +46,15 @@ def get_all_tweets(screen_name):
         #update the id of the oldest tweet less one
         oldest = alltweets[-1].id - 1
 
-        print "...%s tweets downloaded so far" % (len(alltweets))
+        print("...%s tweets downloaded so far" % (len(alltweets)))
 
-    #transform the tweepy tweets into a 2D array that will populate the csv
+    # Transform the tweepy tweets into a 2D array that will populate the csv
     outtweets = [[tweet.id_str, tweet.created_at, tweet.text.encode("utf-8")] for tweet in alltweets]
 
-    #write the csv
-    with open('%s_favorite_tweets.csv' % screen_name, 'wb') as f:
+    # Write the csv
+    target_file = target_file.replace("%NAME%", screen_name)
+
+    with open(target_file, 'wb') as f:
         writer = csv.writer(f)
         writer.writerow(["id","created_at","text"])
         writer.writerows(outtweets)
@@ -62,4 +64,8 @@ def get_all_tweets(screen_name):
 
 if __name__ == '__main__':
     #pass in the username of the account you want to download
-    get_all_tweets("sandmangil")
+    if len(sys.argv) > 1:
+        target_file = sys.argv[1]
+        get_all_tweets("sandmangil", target_file)
+    else:
+        get_all_tweets("sandmangil")
